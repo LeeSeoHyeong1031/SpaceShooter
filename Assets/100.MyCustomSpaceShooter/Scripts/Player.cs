@@ -8,6 +8,10 @@ public class Player : MonoBehaviour
 	public int playerHealth;
 	public bool isTakeDamage = false; //데미지를 받는 중인지.
 	public bool dead = false;
+	public Transform bulletPivot;
+
+	public float attackInterval = 0.5f; //공격 간격
+	private float lastAttackTime = 0; //마지막 공격 시간
 
 	private SpriteRenderer playerRenderer;
 	private SpriteRenderer[] hearts;
@@ -27,15 +31,43 @@ public class Player : MonoBehaviour
 		
 	}
 
+	private void Update()
+	{
+		//플레이어가 죽었는지 검사
+		if (!dead)
+		{
+			//죽지 않았다면 발사 시도.
+			Fire();
+		}
+	}
+	//Shoot함수를 호출하기 위한 조건함수
+	private void Fire()
+	{
+		//현 시간이 마지막 공격 시간보다 크다면 Shoot함수 호출
+		if (Time.time >= lastAttackTime)
+		{
+			StartCoroutine(Shoot());
+			lastAttackTime = Time.time + attackInterval; //현재 시간 + 공격 간격
+		}
+	}
+
+	//실제 발사 진행
+	private IEnumerator Shoot()
+	{
+		 GameObject bullet = PoolManager.instance.ActivateObj(1);
+		bullet.transform.position = transform.position + Vector3.up;
+		yield return null;
+	}
+
 	public void takeDamage()
 	{
 		isTakeDamage = true;
 		--playerHealth;
 		if(playerHealth == 2) hearts[0].color = Color.white;
-		if(playerHealth == 1) hearts[1].color = Color.white;
-		if(playerHealth == 0) hearts[2].color = Color.white;
-		if (playerHealth <= 0)
+		else if(playerHealth == 1) hearts[1].color = Color.white;
+		else if (playerHealth <= 0)
 		{
+			hearts[2].color = Color.white;
 			playerHealth = 0;
 			dead = true;
 			GameOver();
@@ -44,10 +76,13 @@ public class Player : MonoBehaviour
 
 	private void OnTriggerEnter2D(Collider2D other)
 	{
-		//트리거에 닿아도 깜빡이는 동안은 데미지를 입으면 안됌.
-		if (isTakeDamage == true) return;
-		StartCoroutine(BlinkPlayer()); // 데미지를 받으면 깜빡이는 코루틴 실행
-		takeDamage();
+		if (other.CompareTag("Enemy"))
+		{
+			//트리거에 닿아도 깜빡이는 동안은 데미지를 입으면 안됌.
+			if (isTakeDamage == true) return;
+			StartCoroutine(BlinkPlayer()); // 데미지를 받으면 깜빡이는 코루틴 실행
+			takeDamage();
+		}
 	}
 
 	public void GameOver()
